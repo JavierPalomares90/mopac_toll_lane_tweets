@@ -1,8 +1,11 @@
 package fetcher
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"time"
 )
 
@@ -10,31 +13,50 @@ import (
 Fetch the current toll fare from https://mopac-fare.mroms.us/HistoricalFare/
 **/
 
-func getRequestData() (setring,error){
-	//url := "https://mopac-fare.mroms.us/HistoricalFare/"
+func getRequestData() ([]byte, error) {
 	// Add the current time as a parameter to post
 	// Must have format MM/DD/YYYY HH:mm
 	currTime := time.Now().Format("2006-01-02 15:04")
 
 	params := map[string]string{"starttime": currTime}
-	paramsJson, err := json.Marshal(params)
+	paramsJSON, err := json.Marshal(params)
 	if err != nil {
-		return '',err
+		return nil, err
 	}
-	data = string(paramsJson)
-	return data,nil
+	return paramsJSON, nil
 }
 
 func FetchCurrentFare() error {
+	url := "https://mopac-fare.mroms.us/HistoricalFare/"
 
 	// Get the data to send in the request to get the current fair
-	requestData,err := getRequestData()
-	if (err != nil){
-		fmt.Println(err)
-		panic(err)
+	requestData, err := getRequestData()
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	// send the post request to get the fair
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestData))
+	if err != nil {
+		log.Fatal(err)
+		return err
 	}
 
-	
+	// defer closing the response until we're done
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	parseResponseBody(body)
+	return nil
+}
+
+func parseResponseBody(body []byte) {
+    s := string(body)
+    log.Print(s)
 }
 
 /**
